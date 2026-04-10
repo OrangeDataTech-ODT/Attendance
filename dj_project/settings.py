@@ -106,27 +106,27 @@ WSGI_APPLICATION = 'dj_project.wsgi.app'
 # DB_ENGINE - Database engine (default: mssql)
 # DB_DRIVER - ODBC Driver name (default: ODBC Driver 17 for SQL Server)
 # DB_INSTANCE - SQL Server instance name (optional, e.g., SQLEXPRESS)
-# DATABASES = {
-#     'default': {
-#         'ENGINE': env('DB_ENGINE', default='mssql'),
-#         'NAME': env('DB_NAME'),
-#         'USER': env('DB_USER'),
-#         'PASSWORD': env('DB_PASSWORD'),
-#         'HOST': env('DB_HOST', default='localhost'),
-#         'PORT': env('DB_PORT', default='1433'),
-#         'OPTIONS': {
-#             'driver': env('DB_DRIVER', default='ODBC Driver 17 for SQL Server'),
-#             'extra_params': env('DB_EXTRA_PARAMS', default=''),
-#         },
-#         'CONN_MAX_AGE': 600,
-#     }
-# }
-
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL')
-    )
+    'default': {
+        'ENGINE': env('DB_ENGINE', default='mssql'),
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST', default='localhost'),
+        'PORT': env('DB_PORT', default='1433'),
+        'OPTIONS': {
+            # 'driver': env('DB_DRIVER', default='ODBC Driver 17 for SQL Server'),
+            # 'extra_params': env('DB_EXTRA_PARAMS', default=''),
+        },
+        'CONN_MAX_AGE': 600,
+    }
 }
+
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.getenv('DATABASE_URL')
+#     )
+# }
 
 
 
