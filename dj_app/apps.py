@@ -17,6 +17,10 @@ class DjAppConfig(AppConfig):
         to call the /cron/ endpoints instead.
         Set USE_INTERNAL_SCHEDULER=False to disable the internal scheduler.
         """
+        # Worker/scheduler removed: do not start internal APScheduler at app boot.
+        logger.info("Internal scheduler disabled (worker removed).")
+        return
+
         import os
         import environ
         from django.conf import settings
