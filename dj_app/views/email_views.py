@@ -124,6 +124,14 @@ class SendAttendanceEmailAPI(APIView):
         """
         Send attendance report email(s) based on mode
         """
+        return Response(
+            {
+                "status": "error",
+                "message": "Email functionality is disabled on this server.",
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
         try:
             # Log incoming request for debugging
             logger.debug(f"Email API request data keys: {list(request.data.keys())}")
