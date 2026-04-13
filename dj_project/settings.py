@@ -88,7 +88,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'dj_project.wsgi.app'
+WSGI_APPLICATION = 'dj_project.wsgi.application'
 
 
 # Database
@@ -108,7 +108,9 @@ WSGI_APPLICATION = 'dj_project.wsgi.app'
 # DB_INSTANCE - SQL Server instance name (optional, e.g., SQLEXPRESS)
 DATABASES = {
     'default': {
-        'ENGINE': env('DB_ENGINE', default='mssql'),
+        # django-environ can keep surrounding quotes if the value itself was quoted in `.env`.
+        # When that happens Django tries to import a module literally named `"django...` and fails.
+        'ENGINE': env('DB_ENGINE', default='mssql').strip().strip('"').strip("'"),
         'NAME': env('DB_NAME'),
         'USER': env('DB_USER'),
         'PASSWORD': env('DB_PASSWORD'),
