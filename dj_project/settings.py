@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import environ
 import os
-import dj_database_url
+
 
 # django.db.backends.sqlite3
 # django.db.backends.postgresql
@@ -122,11 +122,7 @@ DATABASES = {
     }
 }
 
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.getenv('DATABASE_URL')
-#     )
-# }
+
 
 
 
