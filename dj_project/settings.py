@@ -13,12 +13,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 import environ
 import os
+from importlib.util import find_spec
+import dj_database_url
 
 
-# django.db.backends.sqlite3
-# django.db.backends.postgresql
-# django.db.backends.mysql
-# django.db.backends.oracle
 
 # Load environment variables from .env file
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,14 +26,6 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
@@ -59,7 +49,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,6 +58,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware'
     
 ]
+
+if find_spec('whitenoise') is not None:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 ROOT_URLCONF = 'dj_project.urls'
 
@@ -91,102 +83,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'dj_project.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-# SQL Server Database configuration using environment variables from .env
-# For remote SQL Server database (created on another system via SSMS):
-# Required .env variables:
-# DB_NAME - Database name (as shown in SSMS)
-# DB_USER - SQL Server username (SQL Server Authentication)
-# DB_PASSWORD - SQL Server password
-# DB_HOST - Remote server IP address or hostname (e.g., 192.168.1.100 or server-name)
-# DB_PORT - SQL Server port (default: 1433)
-# Optional .env variables:
-# DB_ENGINE - Database engine (default: mssql)
-# DB_DRIVER - ODBC Driver name (default: ODBC Driver 17 for SQL Server)
-# DB_INSTANCE - SQL Server instance name (optional, e.g., SQLEXPRESS)
 DATABASES = {
-    'default': {
-        # django-environ can keep surrounding quotes if the value itself was quoted in `.env`.
-        # When that happens Django tries to import a module literally named `"django...` and fails.
-        'ENGINE': env('DB_ENGINE', default='mssql').strip().strip('"').strip("'"),
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST', default='localhost'),
-        'PORT': env('DB_PORT', default='1433'),
-        'OPTIONS': {
-            # 'driver': env('DB_DRIVER', default='ODBC Driver 17 for SQL Server'),
-            # 'extra_params': env('DB_EXTRA_PARAMS', default=''),
-        },
-        'CONN_MAX_AGE': 600,
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL')
+    )
 }
 
 
 
-
-
-# SQL Server Database Configuration
-# Using mssql-django (Microsoft's official Django backend for SQL Server)
-# For django-mssql-backend, use ENGINE: 'mssql'
-# For mssql-django, use ENGINE: 'mssql'
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'mssql',
-#         'NAME': env('DB_NAME', default='db_attendence'),
-#         'USER': env('DB_USER', default='praveen'),
-#         'PASSWORD': env('DB_PASSWORD', default='Strong@Password123'),
-#         'HOST': env('DB_HOST', default='192.168.144.1'),
-#         'PORT': env('DB_PORT', default='1433'),
-#         'OPTIONS': {
-#             'driver': env('DB_DRIVER', default='ODBC Driver 17 for SQL Server'),
-#             'extra_params': 'TrustServerCertificate=yes;',
-#         },
-#         'CONN_MAX_AGE': 600,
-#     }
-# }
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'mssql',
-#         'NAME':'db_attendence',
-#         'USER': 'praveen',
-#         'PASSWORD':'Strong@Password123',
-#         'HOST':'192.168.0.160',
-#         'PORT':'1433',
-#         'OPTIONS': {
-#             'driver': env('DB_DRIVER', default='ODBC Driver 17 for SQL Server'),
-#             'extra_params': 'TrustServerCertificate=yes;',
-#         },
-#         'CONN_MAX_AGE': 600,
-#     }
-# }
-
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'mssql',
-#         'NAME': 'db_attendence',
-#         'HOST': '192.168.0.160',
-#         'OPTIONS': {
-#             'driver': 'ODBC Driver 18 for SQL Server',
-#             'trusted_connection': 'yes',
-#             'TrustServerCertificate': 'yes',
-#         },
-#     }
-# }
-
-
-
-# If using named instance, construct connection string properly
-# For named instances, HOST should be: server-name\instance-name or IP\instance-name
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
