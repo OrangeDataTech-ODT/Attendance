@@ -13,10 +13,14 @@ RUN useradd --create-home appuser
 
 # Install Python deps
 COPY requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip --break-system-packages \
-    && pip install --no-cache-dir --break-system-packages -r /app/requirements.txt \
-    && pip install --no-cache-dir --break-system-packages gunicorn
-
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       libpq-dev \
+       default-libmysqlclient-dev \
+       pkg-config \
+       python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy project
 COPY . /app
