@@ -45,8 +45,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/orangedatatech-odt/Attendance-github-web:latest
-            ghcr.io/orangedatatech-odt/Attendance-github-web:${{ github.sha }}
+            ghcr.io/orangedatatech-odt/attendance-github-web:latest
+            ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
             
@@ -64,7 +64,7 @@ jobs:
             docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
 
             echo "📥 Pull latest image"
-            docker pull ghcr.io/orangedatatech-odt/Attendance-github-web:${{ github.sha }}
+            docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
 
             echo "🛑 Stop old container"
             docker stop Attendance || true
@@ -80,7 +80,7 @@ jobs:
               -e NODE_ENV=production \
               -e LOG_LEVEL=INFO \
               -e APP_PORT=80 \
-              ghcr.io/orangedatatech-odt/Attendance-github-web:${{ github.sha }}
+              ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
 
             echo "🧹 Cleaning old Docker images"
             docker system prune -af || true
