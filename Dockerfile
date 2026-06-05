@@ -3,6 +3,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# FIX 1: Added unixodbc-dev, default-libmysqlclient-dev, pkg-config, and python3-dev
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential \
@@ -10,6 +11,7 @@ RUN apt-get update \
        default-libmysqlclient-dev \
        pkg-config \
        python3-dev \
+       unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -22,17 +24,15 @@ RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r /app/requirements.txt \
     && pip install --no-cache-dir gunicorn
 
-# Copy project files
+# Copy project
 COPY . /app
 
-# --- MOVE THIS BLOCK UP HERE (While still running as ROOT) ---
+# FIX 2: Moved these lines UP here so they run as ROOT before switching users
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Change ownership of everything to appuser
 RUN chown -R appuser:appuser /app
 USER appuser
-# -------------------------------------------------------------
 
 EXPOSE 8000
 
