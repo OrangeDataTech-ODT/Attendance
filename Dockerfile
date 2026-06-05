@@ -13,9 +13,10 @@ RUN useradd --create-home appuser
 
 # Install Python deps
 COPY requirements.txt /app/requirements.txt
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r /app/requirements.txt \
-    && pip install --no-cache-dir gunicorn
+RUN pip install --upgrade pip --break-system-packages \
+    && pip install --no-cache-dir --break-system-packages -r /app/requirements.txt \
+    && pip install --no-cache-dir --break-system-packages gunicorn
+
 
 # Copy project
 COPY . /app
