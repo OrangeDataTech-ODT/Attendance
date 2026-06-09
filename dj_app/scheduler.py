@@ -35,17 +35,46 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+FETCH_DAILY_PUNCH_RUN_TIMES = {(11, 0), (16, 30), (23, 59)}
+
+
 def fetch_daily_punch_data_job():
     """
-    Scheduled job to fetch and save punch data for the current day
-    Runs at 11:00 AM, 3:00 PM, and 11:59 PM IST
+    Scheduled job to fetch and save punch data for the current day.
+    Runs only at 11:00 AM, 3:00 PM, and 11:59 PM IST via the deployed cron endpoint.
     """
-    from django.core.management import call_command
-    
+    import os
+
+    ist = pytz.timezone('Asia/Kolkata')
+    now = timezone.now().astimezone(ist)
+    if (now.hour, now.minute) not in FETCH_DAILY_PUNCH_RUN_TIMES:
+        logger.info(
+            "Skipping fetch_daily_punch_data job outside scheduled times (current: %02d:%02d IST)",
+            now.hour,
+            now.minute,
+        )
+        return
+
+    base_url = os.getenv('RENDER_EXTERNAL_URL')
+    if not base_url:
+        logger.error("RENDER_EXTERNAL_URL not set in environment. Skipping fetch_daily_punch_data job.")
+        return
+
     try:
         logger.info("Starting scheduled fetch_daily_punch_data job")
-        call_command('fetch_daily_punch_data')
-        logger.info("Completed scheduled fetch_daily_punch_data job")
+        api_url = f"{base_url.rstrip('/')}/cron/fetch-daily-punch-data/"
+
+        headers = {}
+        token = os.getenv('CRON_SECRET_TOKEN')
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+
+        response = requests.get(api_url, headers=headers, timeout=300)
+        logger.info(
+            "Completed fetch_daily_punch_data job with status %s and response: %s",
+            response.status_code,
+            response.text[:1000],
+        )
     except Exception as e:
         logger.error(f"Error in scheduled fetch_daily_punch_data job: {str(e)}", exc_info=True)
 
@@ -70,7 +99,7 @@ def fetch_id_only_job():
         # }
         
         # Use environment variable for base URL, fallback to localhost for local development
-        base_url = os.getenv('RENDER_EXTERNAL_URL', 'https://check-your-time.onrender.com')
+        base_url = os.getenv('RENDER_EXTERNAL_URL', ' http://127.0.0.1:8000')
         api_url = f"{base_url}/mcid-data/fetch/"
 
         response = requests.get(
@@ -107,7 +136,7 @@ def process_id_only_job():
         # }
         
         # Use environment variable for base URL, fallback to localhost for local development
-        base_url = os.getenv('RENDER_EXTERNAL_URL', 'https://check-your-time.onrender.com')
+        base_url = os.getenv('RENDER_EXTERNAL_URL', ' http://127.0.0.1:8000')
         api_url = f"{base_url}/mcid-data/process/"
 
         response = requests.get(
@@ -124,43 +153,43 @@ def process_id_only_job():
         logger.error(f"Error in scheduled id_only process job: {str(e)}", exc_info=True)
 
 
-def keep_alive_job():
-    """
-    Keep-alive job to ping the health endpoint to prevent Render.com from sleeping
-    This job pings the health check endpoint to keep the service active
-    Note: This only works when the service is already awake. For keeping it awake,
-    use external services (cron-job.org, UptimeRobot) to ping the health endpoint.
-    """
-    import os
-    try:
-        # Get the base URL from environment or use default
-        # On Render, set RENDER_EXTERNAL_URL=https://check-your-time.onrender.com
-        base_url = os.getenv('RENDER_EXTERNAL_URL', 'https://check-your-time.onrender.com')
-        health_url = f"{base_url}/cron/health/"
+# def keep_alive_job():
+#     """
+#     Keep-alive job to ping the health endpoint to prevent Render.com from sleeping
+#     This job pings the health check endpoint to keep the service active
+#     Note: This only works when the service is already awake. For keeping it awake,
+#     use external services (cron-job.org, UptimeRobot) to ping the health endpoint.
+#     """
+#     import os
+#     try:
+#         # Get the base URL from environment or use default
+#         # On Render, set RENDER_EXTERNAL_URL= http://127.0.0.1:8000
+#         base_url = os.getenv('RENDER_EXTERNAL_URL', ' http://127.0.0.1:8000')
+#         health_url = f"{base_url}/cron/health/"
         
-        response = requests.get(health_url, timeout=10)
-        logger.info(f"Keep-alive ping successful: {response.status_code}")
-        return True
-    except Exception as e:
-        logger.warning(f"Keep-alive ping failed (this is normal if service is sleeping): {str(e)}")
-        return False
+#         response = requests.get(health_url, timeout=10)
+#         logger.info(f"Keep-alive ping successful: {response.status_code}")
+#         return True
+#     except Exception as e:
+#         logger.warning(f"Keep-alive ping failed (this is normal if service is sleeping): {str(e)}")
+#         return False
 
 
-def monitor_punches_job():
-    """
-    Scheduled job to monitor punch data and send email notifications
-    - Checks for employees who went out (mcid=1) and haven't returned within 30 minutes
-    - Sends reminder emails to employees
-    - Validates punch patterns and sends notifications for invalid punches
-    """
-    from django.core.management import call_command
+# def monitor_punches_job():
+#     """
+#     Scheduled job to monitor punch data and send email notifications
+#     - Checks for employees who went out (mcid=1) and haven't returned within 30 minutes
+#     - Sends reminder emails to employees
+#     - Validates punch patterns and sends notifications for invalid punches
+#     """
+#     from django.core.management import call_command
     
-    try:
-        logger.info("Starting scheduled monitor_punches job")
-        call_command('monitor_punches')
-        logger.info("Completed scheduled monitor_punches job")
-    except Exception as e:
-        logger.error(f"Error in scheduled monitor_punches job: {str(e)}", exc_info=True)
+#     try:
+#         logger.info("Starting scheduled monitor_punches job")
+#         call_command('monitor_punches')
+#         logger.info("Completed scheduled monitor_punches job")
+#     except Exception as e:
+#         logger.error(f"Error in scheduled monitor_punches job: {str(e)}", exc_info=True)
 
 
 @util.close_old_connections
@@ -215,7 +244,7 @@ def start_scheduler():
         # Schedule job to run at 3:00 PM IST daily
         scheduler.add_job(
             fetch_daily_punch_data_job,
-            trigger=CronTrigger(hour=15, minute=0, timezone=ist),
+            trigger=CronTrigger(hour=15, minute=00, timezone=ist),
             id="fetch_daily_punch_data_3pm",
             name="Fetch Daily Punch Data at 3:00 PM IST",
             replace_existing=True,
@@ -243,23 +272,23 @@ def start_scheduler():
         logger.info("Scheduled job: delete_old_job_executions (Midnight IST)")
 
         # Schedule id_only fetch API at 23:50 IST daily
-        scheduler.add_job(
-            fetch_id_only_job,
-            trigger=CronTrigger(hour=23, minute=50, timezone=ist),
-            id="id_only_fetch_2350",
-            name="ID-only fetch at 23:50 IST",
-            replace_existing=True,
-        )
+        # scheduler.add_job(
+        #     fetch_id_only_job,
+        #     trigger=CronTrigger(hour=23, minute=50, timezone=ist),
+        #     id="id_only_fetch_2350",
+        #     name="ID-only fetch at 23:50 IST",
+        #     replace_existing=True,
+        # )
         logger.info("Scheduled job: id_only_fetch_2350 (23:50 IST)")
 
         # Schedule id_only process API shortly after fetch (23:58 IST daily)
-        scheduler.add_job(
-            process_id_only_job,
-            trigger=CronTrigger(hour=23, minute=58, timezone=ist),
-            id="id_only_process_2358",
-            name="ID-only process at 23:58 IST",
-            replace_existing=True,
-        )
+        # scheduler.add_job(
+        #     process_id_only_job,
+        #     trigger=CronTrigger(hour=23, minute=58, timezone=ist),
+        #     id="id_only_process_2358",
+        #     name="ID-only process at 23:58 IST",
+        #     replace_existing=True,
+        # )
         logger.info("Scheduled job: id_only_process_2358 (23:58 IST)")
         
         # Schedule punch monitoring job to run every 30 minutes (checks for missing return punches)
@@ -272,16 +301,7 @@ def start_scheduler():
         #     replace_existing=True,
         # )
         
-        # Schedule keep-alive job to run every 10 minutes (only works when service is awake)
-        # Note: For Render.com, use external cron jobs to ping the health endpoint
-        scheduler.add_job(
-            keep_alive_job,
-            trigger=CronTrigger(minute='*/10', timezone=ist),  # Every 10 minutes
-            id="keep_alive_5min",
-            name="Keep Alive - Ping Health Endpoint",
-            replace_existing=True,
-        )
-        logger.info("Scheduled job: keep_alive_5min (Every 10 minutes)")
+        # Keep-alive job disabled — use external services to ping /cron/health/ instead
         
         # Clean up orphaned job executions after all jobs are registered
         # This prevents warnings about jobs that no longer exist
