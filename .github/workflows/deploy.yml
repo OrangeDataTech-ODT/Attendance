@@ -67,12 +67,12 @@ jobs:
             docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
 
             echo "🛑 Stop old container"
-            docker stop Attendance || true
+            docker stop attendance || true
             docker rm attendance || true
 
             echo "🚀 Run new container"
             docker run -d \
-              --name Attendance \
+              --name attendance \
               -p 8000:8000 \
               -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
               -e API_KEY_VALUE='${{ secrets.API_KEY_VALUE }}' \
@@ -87,6 +87,6 @@ jobs:
             docker system prune -af || true
 
             echo "🔍 Verifying container..."
-            docker ps | grep Attendance && echo "✅ Container running" || (echo "❌ Container failed" && exit 1)
+            docker ps | grep attendance && echo "✅ Container running" || (echo "❌ Container failed" && exit 1)
 
             echo "🎉 Deployment successful!"
