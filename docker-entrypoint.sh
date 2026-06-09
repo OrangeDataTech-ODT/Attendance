@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 
+# Require DJANGO_SECRET_KEY in production; allow a dev fallback for local Docker runs
+if [ -z "${DJANGO_SECRET_KEY:-}" ]; then
+  if [ "${NODE_ENV:-}" = "production" ]; then
+    echo "ERROR: DJANGO_SECRET_KEY must be set in production."
+    exit 1
+  fi
+  export DJANGO_SECRET_KEY="django-insecure-local-dev-key-not-for-production"
+  echo "WARNING: DJANGO_SECRET_KEY not set. Using built-in dev key."
+fi
+
 # Run database migrations (skip if DJANGO_MIGRATE=0)
 if [ "${DJANGO_MIGRATE:-1}" != "0" ]; then
   echo "Running migrations..."

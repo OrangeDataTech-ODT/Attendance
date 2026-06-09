@@ -73,13 +73,14 @@ jobs:
             echo "🚀 Run new container"
             docker run -d \
               --name Attendance \
-              -p 8000:80 \
+              -p 8000:8000 \
+              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
               -e API_KEY_VALUE='${{ secrets.API_KEY_VALUE }}' \
               -e BLOB_READ_WRITE_TOKEN='${{ secrets.BLOB_READ_WRITE_TOKEN }}' \
               -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
               -e NODE_ENV=production \
               -e LOG_LEVEL=INFO \
-              -e APP_PORT=80 \
+              -e APP_PORT=8000 \
               ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
 
             echo "🧹 Cleaning old Docker images"
