@@ -3,8 +3,15 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# FIX 1: Added unixodbc-dev, default-libmysqlclient-dev, pkg-config, and python3-dev
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libpq-dev \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       libpq-dev \
+       default-libmysqlclient-dev \
+       pkg-config \
+       python3-dev \
+       unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -20,14 +27,14 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY . /app
 
+# FIX 2: Moved these lines UP here so they run as ROOT before switching users
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
-
-# Entrypoint handles migrations/collectstatic then execs the CMD
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENV DJANGO_SETTINGS_MODULE=dj_project.settings
 ENV PORT=8000
