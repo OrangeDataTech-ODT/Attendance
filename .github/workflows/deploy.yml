@@ -47,10 +47,10 @@ jobs:
           tags: |
             ghcr.io/orangedatatech-odt/attendance-github-web:latest
             ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
+          # Uses the workflow dispatch input to force a clean build if selected
+          no-cache: ${{ github.event.inputs.no_cache == 'true' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-            
-
 
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -65,6 +65,9 @@ jobs:
 
             echo "📥 Pull latest image"
             docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
+
+            echo "🧹 Cleaning old dangling Docker images"
+            docker image prune -f
 
             echo "🛑 Stop old container"
             docker stop attendance || true
@@ -83,8 +86,8 @@ jobs:
               -e APP_PORT=8000 \
               ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
 
-            echo "🧹 Cleaning old Docker images"
-            docker system prune -af || true
+            echo "⏳ Waiting for app stabilization..."
+            sleep 3
 
             echo "🔍 Verifying container..."
             docker ps | grep attendance && echo "✅ Container running" || (echo "❌ Container failed" && exit 1)
