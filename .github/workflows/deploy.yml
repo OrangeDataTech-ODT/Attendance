@@ -48,6 +48,11 @@ jobs:
           echo "Checking if API exists in repo"
           grep -r "auto-group-entry" . || (echo "❌ API NOT FOUND" && exit 1)
 
+      - name: Debug
+        run: |
+          echo "Actor: ${{ github.actor }}"
+          echo "Repo: ${{ github.repository }}"
+
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
