@@ -15,7 +15,7 @@ on:
         description: "Force rebuild"
         required: false
         default: "false"
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,6 +34,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/orangedatatech-odt/attendance-github-web
+          tags: |
+            type=raw,value=latest
+            type=sha
+
       - name: Verify new API exists in code
         run: |
           echo "Checking if API exists in repo"
@@ -44,14 +53,13 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/orangedatatech-odt/attendance-github-web:latest
-            ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Uses the workflow dispatch input to force a clean build if selected
           no-cache: ${{ github.event.inputs.no_cache == 'true' }}
-          # ⚡ Optimized: Keeps installations cached between runs
           cache-from: type=gha
           cache-to: type=gha,mode=max
-            
+
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -61,7 +69,7 @@ jobs:
           port: 22
           script: |
             echo "🔐 Login to GHCR"
-            docker login ghcr.io -u ODT-Admin -p ${{ secrets.GHCR_TOKEN }}
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
 
             echo "📥 Pull latest image"
             docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
