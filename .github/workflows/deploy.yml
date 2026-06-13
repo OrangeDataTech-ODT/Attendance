@@ -38,7 +38,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/orangedatatech-odt/attendance-github-web
+          images: ghcr.io/orangedatatech-odt/attendance
           tags: |
             type=raw,value=latest
             type=raw,value=${{ github.sha }}
@@ -78,8 +78,7 @@ jobs:
               --password-stdin
 
             echo "📥 Pull latest image"
-            docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
-
+            docker pull ghcr.io/orangedatatech-odt/attendance:${{ github.sha }}
             echo "🧹 Cleaning old dangling Docker images"
             docker image prune -f
 
@@ -98,8 +97,7 @@ jobs:
               -e NODE_ENV=production \
               -e LOG_LEVEL=INFO \
               -e APP_PORT=8000 \
-              ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
-
+              ghcr.io/orangedatatech-odt/attendance:${{ github.sha }}
             echo "⏳ Waiting for app stabilization..."
             sleep 3
 
