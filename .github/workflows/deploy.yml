@@ -31,7 +31,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # Crucial: Setting up Buildx enables advanced multi-stage caching features
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -49,10 +48,10 @@ jobs:
             ghcr.io/orangedatatech-odt/attendance-github-web:latest
             ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
           no-cache: ${{ github.event.inputs.no_cache == 'true' }}
-          # ⚡ FIX: These lines sync container layers directly to GitHub's runner cache
+          # ⚡ Optimized: Keeps installations cached between runs
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
+            
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -62,7 +61,7 @@ jobs:
           port: 22
           script: |
             echo "🔐 Login to GHCR"
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
+            docker login ghcr.io -u ODT-Admin -p ${{ secrets.GHCR_TOKEN }}
 
             echo "📥 Pull latest image"
             docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
@@ -78,7 +77,7 @@ jobs:
             docker run -d \
               --name attendance \
               -p 8000:8000 \
-              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_SOURCE }}' \
+              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
               -e API_KEY_VALUE='${{ secrets.API_KEY_VALUE }}' \
               -e BLOB_READ_WRITE_TOKEN='${{ secrets.BLOB_READ_WRITE_TOKEN }}' \
               -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
