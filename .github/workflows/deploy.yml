@@ -15,7 +15,7 @@ on:
         description: "Force rebuild"
         required: false
         default: "false"
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,28 +29,40 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/orangedatatech-odt/attendance
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ github.sha }}
 
       - name: Verify new API exists in code
         run: |
           echo "Checking if API exists in repo"
           grep -r "auto-group-entry" . || (echo "❌ API NOT FOUND" && exit 1)
 
+      - name: Debug
+        run: |
+          echo "Actor: ${{ github.actor }}"
+          echo "Repo: ${{ github.repository }}"
+
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/orangedatatech-odt/attendance-github-web:latest
-            ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          no-cache: ${{ github.event.inputs.no_cache == 'true' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-            
-
 
       - name: Deploy to VM via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -61,18 +73,22 @@ jobs:
           port: 22
           script: |
             echo "🔐 Login to GHCR"
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u "${{ secrets.GHCR_USERNAME }}" \
+              --password-stdin
 
             echo "📥 Pull latest image"
-            docker pull ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
+            docker pull ghcr.io/orangedatatech-odt/attendance:${{ github.sha }}
+            echo "🧹 Cleaning old dangling Docker images"
+            docker image prune -f
 
             echo "🛑 Stop old container"
-            docker stop Attendance || true
+            docker stop attendance || true
             docker rm attendance || true
 
             echo "🚀 Run new container"
             docker run -d \
-              --name Attendance \
+              --name attendance \
               -p 8000:8000 \
               -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
               -e API_KEY_VALUE='${{ secrets.API_KEY_VALUE }}' \
@@ -81,12 +97,11 @@ jobs:
               -e NODE_ENV=production \
               -e LOG_LEVEL=INFO \
               -e APP_PORT=8000 \
-              ghcr.io/orangedatatech-odt/attendance-github-web:${{ github.sha }}
-
-            echo "🧹 Cleaning old Docker images"
-            docker system prune -af || true
+              ghcr.io/orangedatatech-odt/attendance:${{ github.sha }}
+            echo "⏳ Waiting for app stabilization..."
+            sleep 3
 
             echo "🔍 Verifying container..."
-            docker ps | grep Attendance && echo "✅ Container running" || (echo "❌ Container failed" && exit 1)
+            docker ps | grep attendance && echo "✅ Container running" || (echo "❌ Container failed" && exit 1)
 
             echo "🎉 Deployment successful!"
