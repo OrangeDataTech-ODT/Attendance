@@ -13,14 +13,9 @@ class DjAppConfig(AppConfig):
         This method is called when the app is ready
         
         Note: On Render free tier, services spin down when inactive, so the scheduler
-        won't work. Use external cron jobs (Render Cron Jobs or external services)
-        to call the /cron/ endpoints instead.
+        won't work unless the server stays running.
         Set USE_INTERNAL_SCHEDULER=False to disable the internal scheduler.
         """
-        # Worker/scheduler removed: do not start internal APScheduler at app boot.
-        logger.info("Internal scheduler disabled (worker removed).")
-        return
-
         import os
         import environ
         from django.conf import settings
@@ -71,5 +66,4 @@ class DjAppConfig(AppConfig):
             logger.info("Internal scheduler started successfully")
         except Exception as e:
             logger.error(f"Error starting scheduler: {str(e)}", exc_info=True)
-            logger.warning("Scheduler failed to start. Consider using external cron jobs instead.")
-            logger.warning("Set USE_INTERNAL_SCHEDULER=False and use /cron/ endpoints with external cron services.")
+            logger.warning("Scheduler failed to start.")
