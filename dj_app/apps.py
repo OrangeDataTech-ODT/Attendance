@@ -17,49 +17,35 @@ class DjAppConfig(AppConfig):
         Set USE_INTERNAL_SCHEDULER=False to disable the internal scheduler.
         """
         import os
+        import sys
         import environ
         from django.conf import settings
-        
-        # Check if we should start the scheduler
+
         # Skip if running tests, migrations, or collectstatic
         skip_commands = ['test', 'migrate', 'collectstatic', 'makemigrations', 'shell']
-        if any(cmd in os.sys.argv for cmd in skip_commands):
-            logger.info(f"Skipping scheduler start for command: {os.sys.argv}")
+        if any(cmd in sys.argv for cmd in skip_commands):
+            logger.info(f"Skipping scheduler start for command: {sys.argv}")
             return
-        
-        # Check if internal scheduler should be used
-        # If USE_INTERNAL_SCHEDULER is False, we'll use external cron jobs instead
+
+        # Django runserver autoreloader: only start in the child process
+        if 'runserver' in sys.argv and os.environ.get('RUN_MAIN') != 'true':
+            return
+
         env = environ.Env()
         environ.Env.read_env(os.path.join(settings.BASE_DIR, '.env'))
         use_internal_scheduler = env.bool('USE_INTERNAL_SCHEDULER', default=True)
-        
+
         if not use_internal_scheduler:
-            logger.info("Internal scheduler disabled. Using external cron jobs instead.")
-            logger.info("To use internal scheduler, set USE_INTERNAL_SCHEDULER=True")
+            logger.info("Internal scheduler disabled (USE_INTERNAL_SCHEDULER=False).")
             return
-        
-        # Only start scheduler in the main process (not in worker processes)
-        # This prevents multiple schedulers from running
-        try:
-            # Check if we're in a worker process (e.g., gunicorn worker)
-            # In production, only start scheduler in the main/master process
-            import sys
-            is_main_process = True
-            
-            # For gunicorn, only start in master process
-            if 'gunicorn' in sys.modules:
-                try:
-                    from gunicorn.arbiter import Arbiter
-                    # If we can import Arbiter, we're likely in a worker
-                    # The master process will handle this differently
-                    is_main_process = os.environ.get('SERVER_SOFTWARE', '').startswith('gunicorn')
-                except ImportError:
-                    pass
-            
-            if not is_main_process:
-                logger.info("Skipping scheduler start in worker process")
+
+        # Gunicorn: start scheduler only in the worker with RUN_SCHEDULER=1
+        if 'gunicorn' in sys.modules:
+            if os.environ.get('RUN_SCHEDULER', '0') != '1':
+                logger.info("Skipping scheduler in gunicorn worker (RUN_SCHEDULER!=1).")
                 return
-            
+
+        try:
             from .scheduler import start_scheduler
             logger.info("Attempting to start internal scheduler...")
             start_scheduler()

@@ -38,6 +38,7 @@ EXPOSE 8000
 
 ENV DJANGO_SETTINGS_MODULE=dj_project.settings
 ENV PORT=8000
+ENV RUN_SCHEDULER=1
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["gunicorn", "dj_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["gunicorn", "dj_project.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1"]
